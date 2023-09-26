@@ -1,0 +1,166 @@
+---
+title: "Cyclistic Bike Share Analysis"
+author: "Hrithik Sharma"
+date: "2023-09-26"
+output: html_document
+---
+## The Description
+
+Three questions will guide the future marketing program:
+1. How do annual members and casual riders use Cyclistic bikes differently?
+2. Why would casual riders buy Cyclistic annual memberships?
+3. How can Cyclistic use digital media to influence casual riders to become members
+
+## Prepring the Data
+### Install and import Packages
+```{r setup, include=FALSE}
+# Set the CRAN mirror
+options(repos = "https://cran.rstudio.com/")
+
+#Install packages
+install.packages("tidyverse")
+install.packages("lubridate")
+install.packages("ggplot2")
+install.packages("janitor")
+install.packages("dplyr")
+
+#import packages
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(janitor)
+library(dplyr)
+```
+
+### Import all the Datasets
+```{r}
+#import all datasets
+data_01 <- read.csv("202101-divvy-tripdata.csv")
+data_02 <- read.csv("202102-divvy-tripdata.csv")
+data_03 <- read.csv("202103-divvy-tripdata.csv")
+data_04 <- read.csv("202104-divvy-tripdata.csv")
+data_05 <- read.csv("202105-divvy-tripdata.csv")
+data_06 <- read.csv("202106-divvy-tripdata.csv")
+data_07 <- read.csv("202107-divvy-tripdata.csv")
+data_08 <- read.csv("202108-divvy-tripdata.csv")
+data_09 <- read.csv("202109-divvy-tripdata.csv")
+data_10 <- read.csv("202110-divvy-tripdata.csv")
+data_11 <- read.csv("202111-divvy-tripdata.csv")
+data_12 <- read.csv("202112-divvy-tripdata.csv")
+```
+
+### Verify the datasets for same column names and data types
+```{r}
+#summarize the data frame
+str(data_01)
+colnames(data_01)
+```
+
+### Merge all the datasets in one after confirming that they have the same column names and data types
+```{r}
+#merge all data sets into one dataset
+merged_data <- bind_rows(data_01,data_02,data_03,data_04,data_05,data_06,data_07,data_08,data_09,data_10,data_11,data_12)
+```
+
+### Verify the merged data
+```{r}
+head(merged_data)
+colnames(merged_data)
+str(merged_data)
+```
+
+## Process The Data
+### Create new Data feilds for analysis
+```{r}
+#create date,month,day,year and day of week
+merged_data$date <- as.Date(merged_data$started_at)
+merged_data$month <- format(as.Date(merged_data$started_at), "%m")
+merged_data$day <- format(as.Date(merged_data$started_at), "%d")
+merged_data$year <- format(as.Date(merged_data$started_at), "%Y")
+merged_data$day_of_week <- format(as.Date(merged_data$started_at), "%A")
+```
+
+### Inspect the new data fields
+```{r}
+# Inspect the new table that has been created
+colnames(merged_data)  #List of column names
+nrow(merged_data)  #How many rows are in data frame?
+dim(merged_data)  #Dimensions of the data frame?
+head(merged_data)  #See the first 6 rows of data frame.  Also tail(qs_raw)
+str(merged_data)  #See list of columns and data types (numeric, character, etc)
+summary(merged_data)  #Statistical summary of data. Mainly for numerics
+```
+
+### Convert the month from numeric to appropriate month names
+```{r}
+merged_data$month <- as.numeric(merged_data$month)
+merged_data$month <- month.name[merged_data$month]
+```
+
+### Create a column to print the difference between the end time and start time
+```{r}
+#difference between end time and start time and have trip_duration in minutes
+merged_data$ride_length <- difftime(merged_data$ended_at, merged_data$started_at)
+is.factor(merged_data$ride_length)
+merged_data$ride_length <- as.numeric(as.character(merged_data$ride_length))
+is.numeric(merged_data$ride_length)
+```
+
+### Rename column names and modify data
+```{r}
+#Rename column name
+colnames(merged_data)[colnames(merged_data) == "member_casual"] <- "usertype"
+#rename member = subscriber and casual = customer
+merged_data <- merged_data %>%
+  mutate(usertype = ifelse(usertype == "member", "Subscriber", usertype)) %>% 
+  mutate(usertype = ifelse(usertype == "casual", "Customer", usertype))
+
+unique(merged_data$usertype)
+```
+
+### Delete 'BAD DATA' - delete data that has the Trip Duration in negative
+```{r}
+#delete data where trip_duration<0
+clean_data_v1 <- merged_data[!(merged_data$ride_length<0),]
+```
+
+### Delete empty data
+```{r}
+#Delete empty data
+clean_data_v1 <- na.omit(clean_data_v1)
+head(clean_data_v1)
+```
+
+### Transform the trip_duration in mintues
+```{r}
+#ride_length converted in minutes for understandable analysis
+clean_data_v1$ride_length_minutes <- clean_data_v1$ride_length / 60
+```
+
+## Analyise the Data
+### Order the weekdays in the correct order
+```{r}
+clean_data_v1$day_of_week <- ordered(clean_data_v1$day_of_week, levels=c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+```
+
+### Create an additional data frame
+```{r}
+add_data_3 <- clean_data_v1 %>% 
+  mutate(weekday = wday(started_at, label = TRUE),
+         month = month(started_at, label = TRUE),
+         hour = hour(started_at)) %>%
+  group_by(usertype, weekday, month, hour) %>%  #groups by usertype and weekday
+  summarise(number_of_rides = n()							#calculates the number of rides and average duration 
+            ,average_duration = mean(ride_length)
+            ,rideable_type = first(rideable_type)) %>% 		# calculates the average duration
+  arrange(usertype, weekday, month, hour)	
+```
+
+### Export the data
+```{r}
+write.csv(clean_data_v1, file = "D:/Data_Analysis/Cyclistic_2019_self_analysis/clean_data_v1.csv")
+write.csv(add_data_3, file = "D:/Data_Analysis/Cyclistic_2019_self_analysis/add_data_v3.csv")
+```
+
+### Visualize data
+Visualization is done in Tableau [Click Here](https://public.tableau.com/views/CyclisticBikeShareAnalysis_16956719298060/CyclisticBikeShareAnalysis?:language=en-US&:display_count=n&:origin=viz_share_link) to view the Visualization
