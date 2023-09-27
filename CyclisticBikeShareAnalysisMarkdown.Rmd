@@ -144,21 +144,83 @@ clean_data_v1$day_of_week <- ordered(clean_data_v1$day_of_week, levels=c("Sunday
 ```
 
 ### Create an additional data frame
+#### Data frame 1: Displays Average Trip Duration and Number of Rides per Weekday
 ```{r}
-add_data_3 <- clean_data_v1 %>% 
-  mutate(weekday = wday(started_at, label = TRUE),
-         month = month(started_at, label = TRUE),
-         hour = hour(started_at)) %>%
-  group_by(usertype, weekday, month, hour) %>%  #groups by usertype and weekday
+add_data_1 <- clean_data_v1 %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>%
+  group_by(usertype, weekday) %>%  #groups by usertype and weekday
   summarise(number_of_rides = n()							#calculates the number of rides and average duration 
-            ,average_duration = mean(ride_length)
+            ,average_duration = mean(ride_length_minutes)
             ,rideable_type = first(rideable_type)) %>% 		# calculates the average duration
-  arrange(usertype, weekday, month, hour)	
+  arrange(usertype, weekday)%>% 
+  print()
 ```
 
+#### Data frame 2: Displays Average Trip Duration and Number of Rides per Month
+```{r}
+add_data_2 <- clean_data_v1 %>% 
+  mutate(month = month(started_at, label = TRUE),) %>%
+  group_by(usertype, month) %>%  #groups by usertype and weekday
+  summarise(number_of_rides = n()							#calculates the number of rides and average duration 
+            ,average_duration = mean(ride_length_minutes)
+            ,rideable_type = first(rideable_type)) %>% 		# calculates the average duration
+  arrange(usertype, month)%>% 
+  print()
+```
+
+#### Data frame 3: Displays Average Trip Duration and Number of Rides per Hour
+```{r}
+add_data_3 <- clean_data_v1 %>% 
+  mutate(hour = hour(started_at)) %>%
+  group_by(usertype, hour) %>%  #groups by usertype and weekday
+  summarise(number_of_rides = n()							#calculates the number of rides and average duration 
+            ,average_duration = mean(ride_length_minutes)
+            ,rideable_type = first(rideable_type)) %>% 		# calculates the average duration
+  arrange(usertype, hour) %>% 
+  print()
+```
+
+### Create Visualizations
+#### Graph 1: Average Trip Duration per Month by Usertype
+```{r}
+add_data_2 %>% ggplot(aes(x = month, y = average_duration, fill = usertype)) +
+  geom_col(position = "dodge")
+```
+
+#### Graph 2: Average Number of Rides per Month by Usertype
+```{r}
+add_data_2 %>% ggplot(aes(x = month, y = number_of_rides, fill = usertype)) +
+  geom_col(position = "dodge")
+```
+
+#### Graph 3: Average Trip Duration per Weekday by Usertype
+```{r}
+add_data_1 %>% ggplot(aes(x = weekday, y = average_duration, fill = usertype)) +
+  geom_col(position = "dodge")
+```
+
+#### Graph 4: Average Number of Rides per Weekday by Usertype
+```{r}
+add_data_1 %>% ggplot(aes(x = weekday, y = number_of_rides, fill = usertype)) +
+  geom_col(position = "dodge")
+```
+
+#### Graph 5:Average Trip Duration per hour by Usertype
+```{r}
+add_data_3 %>% ggplot(aes(x = hour, y = average_duration, fill = usertype)) +
+  geom_col(position = "dodge")
+```
+
+#### Graph 6:Average Number of Rides per hour by Usertype
+```{r}
+add_data_3 %>% ggplot(aes(x = hour, y = number_of_rides, fill = usertype)) +
+  geom_col(position = "dodge")
+```
 ### Export the data
 ```{r}
 write.csv(clean_data_v1, file = "D:/Data_Analysis/Cyclistic_2019_self_analysis/clean_data_v1.csv")
+write.csv(add_data_1, file = "D:/Data_Analysis/Cyclistic_2019_self_analysis/add_data_v1.csv")
+write.csv(add_data_2, file = "D:/Data_Analysis/Cyclistic_2019_self_analysis/add_data_v2.csv")
 write.csv(add_data_3, file = "D:/Data_Analysis/Cyclistic_2019_self_analysis/add_data_v3.csv")
 ```
 
